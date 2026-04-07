@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stratos - Interactive Weather Dashboard</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Icons (Phosphor Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav glass-panel">
+        <div class="logo">
+            <i class="ph-fill ph-cloud-sun"></i>
+            <span>Stratos</span>
+        </div>
+
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="location-search" placeholder="Search for cities..." autocomplete="off">
+            </div>
+            <button id="btn-locate" class="btn-icon" title="Use my location">
+                <i class="ph ph-crosshair"></i>
+            </button>
+            <div id="search-results" class="search-dropdown hidden"></div>
+        </div>
+
+        <div class="unit-toggle-container">
+            <span id="label-c" class="active">°C</span>
+            <label class="switch">
+                <input type="checkbox" id="unit-switch">
+                <span class="slider round"></span>
+            </label>
+            <span id="label-f">°F</span>
+        </div>
+    </nav>
+
+    <div class="app-container">
+        <!-- Main Dashboard Content -->
+        <main class="dashboard">
+            <!-- Header Section -->
+            <header class="dashboard-header">
+                <div>
+                    <h1 id="current-location-name">New York, US</h1>
+                    <p id="current-date" class="date-text">Monday, Jan 1</p>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid -->
+            <div class="bento-grid">
+                
+                <!-- Main Weather Widget -->
+                <div class="bento-item current-weather glass-panel">
+                    <div class="weather-main-info">
+                        <div class="temp-display">
+                            <h2 id="current-temp">--°</h2>
+                            <span class="unit">C</span>
+                        </div>
+                        <div class="weather-condition">
+                            <i id="current-icon" class="ph-fill ph-cloud"></i>
+                            <span id="current-desc">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="weather-metrics">
+                        <div class="metric">
+                            <i class="ph ph-thermometer"></i>
+                            <div>
+                                <p class="label">Feels Like</p>
+                                <p class="value" id="feels-like">--°</p>
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <i class="ph ph-drop"></i>
+                            <div>
+                                <p class="label">Humidity</p>
+                                <p class="value" id="humidity">--%</p>
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <i class="ph ph-wind"></i>
+                            <div>
+                                <p class="label">Wind Speed</p>
+                                <p class="value" id="wind-speed">-- km/h</p>
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <i class="ph ph-sun"></i>
+                            <div>
+                                <p class="label">UV Index</p>
+                                <p class="value" id="uv-index">--</p>
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <i class="ph ph-leaf"></i>
+                            <div>
+                                <p class="label">Air Quality</p>
+                                <p class="value" id="aqi">--</p>
+                            </div>
+                        </div>
+                        <div class="metric sun-times-container">
+                             <div class="sun-item">
+                                 <i class="ph-fill ph-sun-horizon" style="color: #fbbf24;"></i>
+                                 <div>
+                                     <p class="label">Sunrise</p>
+                                     <p class="value" id="sunrise">--:--</p>
+                                 </div>
+                             </div>
+                             <div class="sun-item">
+                                 <i class="ph-fill ph-moon-stars" style="color: #818cf8;"></i>
+                                 <div>
+                                     <p class="label">Sunset</p>
+                                     <p class="value" id="sunset">--:--</p>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Widget -->
+                <div class="bento-item map-widget glass-panel">
+                    <div class="widget-header">
+                        <h3>Interactive Map</h3>
+                        <span class="badge" id="map-coords">Lat: -- Lon: --</span>
+                    </div>
+                    <div id="weather-map" class="map-container"></div>
+                </div>
+
+                <!-- AQI Widget -->
+                <div class="bento-item aqi-widget glass-panel" id="aqi-widget">
+                    <div class="widget-header">
+                        <h3><i class="ph-fill ph-leaf"></i> Air Quality Index</h3>
+                        <span class="badge" id="aqi-badge">--</span>
+                    </div>
+                    <div class="aqi-main">
+                        <div class="aqi-gauge-wrapper">
+                            <div class="aqi-gauge" id="aqi-gauge">
+                                <svg viewBox="0 0 120 120" class="aqi-ring">
+                                    <circle class="aqi-ring-bg" cx="60" cy="60" r="52" />
+                                    <circle class="aqi-ring-fill" id="aqi-ring-fill" cx="60" cy="60" r="52" />
+                                </svg>
+                                <div class="aqi-gauge-value">
+                                    <span class="aqi-number" id="aqi-number">--</span>
+                                    <span class="aqi-unit">US AQI</span>
+                                </div>
+                            </div>
+                            <div class="aqi-level-info">
+                                <span class="aqi-level-label" id="aqi-level-label">--</span>
+                                <p class="aqi-health-msg" id="aqi-health-msg">Search a city to view air quality data.</p>
+                            </div>
+                        </div>
+                        <div class="aqi-pollutants" id="aqi-pollutants">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weather Alerts Widget -->
+                <div class="bento-item alerts-widget glass-panel" id="alerts-widget">
+                    <div class="widget-header">
+                        <h3><i class="ph-fill ph-warning-diamond"></i> Weather Alerts</h3>
+                        <span class="alerts-count-badge" id="alerts-count">0</span>
+                    </div>
+                    <div class="alerts-list" id="alerts-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Forecast Widget -->
+                <div class="bento-item forecast-widget glass-panel">
+                    <h3>7-Day Forecast</h3>
+                    <div class="forecast-list" id="forecast-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Chart Widget -->
+                <div class="bento-item chart-widget glass-panel">
+                    <div class="widget-header">
+                        <h3>Temperature Trend (Next 24h)</h3>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="temp-chart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ═══ Global Warming Monitor Section ═══ -->
+            <section class="climate-section" id="climate-section">
+                <div class="climate-section-header">
+                    <div class="climate-title-group">
+                        <i class="ph-fill ph-globe-hemisphere-west climate-globe-icon"></i>
+                        <div>
+                            <h2>Global Warming Monitor</h2>
+                            <p class="climate-subtitle">Real-time climate data &amp; awareness dashboard</p>
+                        </div>
+                    </div>
+                    <span class="climate-live-badge"><span class="live-dot"></span> LIVE DATA</span>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="climate-kpi-grid">
+                    <div class="kpi-card glass-panel" id="kpi-temp">
+                        <div class="kpi-header">
+                            <span class="kpi-dot"></span>
+                            <i class="ph-fill ph-thermometer-hot kpi-icon" style="color:#ef4444"></i>
+                        </div>
+                        <div class="kpi-body">
+                            <span class="kpi-label">Temp Above Baseline</span>
+                            <span class="kpi-value">--</span>
+                            <span class="kpi-status">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel" id="kpi-co2">
+                        <div class="kpi-header">
+                            <span class="kpi-dot"></span>
+                            <i class="ph-fill ph-factory kpi-icon" style="color:#8b5cf6"></i>
+                        </div>
+                        <div class="kpi-body">
+                            <span class="kpi-label">CO₂ Level</span>
+                            <span class="kpi-value">--</span>
+                            <span class="kpi-status">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel" id="kpi-rate">
+                        <div class="kpi-header">
+                            <span class="kpi-dot"></span>
+                            <i class="ph-fill ph-trend-up kpi-icon" style="color:#f59e0b"></i>
+                        </div>
+                        <div class="kpi-body">
+                            <span class="kpi-label">Warming Rate / Decade</span>
+                            <span class="kpi-value">--</span>
+                            <span class="kpi-status">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card glass-panel" id="kpi-overall">
+                        <div class="kpi-header">
+                            <span class="kpi-dot"></span>
+                            <i class="ph-fill ph-pulse kpi-icon" style="color:#22c55e"></i>
+                        </div>
+                        <div class="kpi-body">
+                            <span class="kpi-label">Overall Status</span>
+                            <span class="kpi-value">--</span>
+                            <span class="kpi-status">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="climate-charts-grid">
+                    <div class="climate-chart-card glass-panel">
+                        <div class="widget-header">
+                            <h3><i class="ph-fill ph-chart-line-up" style="color:#ef4444"></i> Global Temperature Anomaly</h3>
+                            <span class="badge">1880 — Present</span>
+                        </div>
+                        <div class="climate-chart-container">
+                            <canvas id="climate-temp-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="climate-chart-card glass-panel">
+                        <div class="widget-header">
+                            <h3><i class="ph-fill ph-cloud-arrow-up" style="color:#8b5cf6"></i> Atmospheric CO₂ Trend</h3>
+                            <span class="badge">2016 — Present</span>
+                        </div>
+                        <div class="climate-chart-container">
+                            <canvas id="climate-co2-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Climate Alerts -->
+                <div class="climate-alerts-section glass-panel">
+                    <div class="widget-header">
+                        <h3><i class="ph-fill ph-warning-octagon" style="color:#f59e0b"></i> Climate Alerts</h3>
+                    </div>
+                    <div class="climate-alerts-list" id="climate-alerts-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Awareness Section -->
+                <div class="awareness-section">
+                    <div class="awareness-block">
+                        <h3 class="awareness-heading"><i class="ph-fill ph-fire" style="color:#ef4444"></i> Causes of Global Warming</h3>
+                        <div class="awareness-grid">
+                            <div class="awareness-card glass-panel">
+                                <i class="ph-fill ph-factory" style="color:#a78bfa"></i>
+                                <h4>Fossil Fuels</h4>
+                                <p>Burning coal, oil, and gas for energy releases massive CO₂ into the atmosphere.</p>
+                            </div>
+                            <div class="awareness-card glass-panel">
+                                <i class="ph-fill ph-tree" style="color:#34d399"></i>
+                                <h4>Deforestation</h4>
+                                <p>Cutting down forests removes carbon sinks, accelerating greenhouse gas buildup.</p>
+                            </div>
+                            <div class="awareness-card glass-panel">
+                                <i class="ph-fill ph-cow" style="color:#fbbf24"></i>
+                                <h4>Agriculture</h4>
+                                <p>Livestock farming produces methane, while fertilizers release nitrous oxide.</p>
+                            </div>
+                            <div class="awareness-card glass-panel">
+                                <i class="ph-fill ph-buildings" style="color:#60a5fa"></i>
+                                <h4>Industrialization</h4>
+                                <p>Manufacturing and construction processes emit significant greenhouse gases.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="awareness-block">
+                        <h3 class="awareness-heading"><i class="ph-fill ph-leaf" style="color:#22c55e"></i> How You Can Help</h3>
+                        <div class="awareness-grid">
+                            <div class="awareness-card glass-panel tip-card">
+                                <i class="ph-fill ph-lightning" style="color:#fbbf24"></i>
+                                <h4>Save Energy</h4>
+                                <p>Switch to LED lighting, unplug devices, and choose energy-efficient appliances.</p>
+                            </div>
+                            <div class="awareness-card glass-panel tip-card">
+                                <i class="ph-fill ph-bicycle" style="color:#34d399"></i>
+                                <h4>Green Transport</h4>
+                                <p>Walk, bike, carpool, or use public transit to reduce your carbon footprint.</p>
+                            </div>
+                            <div class="awareness-card glass-panel tip-card">
+                                <i class="ph-fill ph-recycle" style="color:#60a5fa"></i>
+                                <h4>Reduce & Recycle</h4>
+                                <p>Minimize waste, reuse products, and recycle materials to lower emissions.</p>
+                            </div>
+                            <div class="awareness-card glass-panel tip-card">
+                                <i class="ph-fill ph-tree-evergreen" style="color:#22c55e"></i>
+                                <h4>Plant Trees</h4>
+                                <p>Trees absorb CO₂ naturally. Support reforestation and plant in your community.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="overlay hidden">
+            <div class="spinner"></div>
+            <p>Gathering weather data...</p>
+        </div>
+    </div>
+
+    <!-- Detailed Forecast Modal -->
+    <div id="forecast-modal" class="overlay hidden">
+        <div class="modal-content glass-panel">
+            <button id="close-modal" class="btn-icon btn-close"><i class="ph ph-x"></i></button>
+            
+            <h2 id="modal-date">Date</h2>
+            <div class="modal-body">
+                <img id="modal-icon" src="" alt="Weather Condition">
+                <h3 id="modal-desc">Condition</h3>
+                
+                <div class="modal-metrics">
+                    <div class="metric"><span class="label">High:</span> <span class="value" id="modal-max">--</span></div>
+                    <div class="metric"><span class="label">Low:</span> <span class="value" id="modal-min">--</span></div>
+                    <div class="metric"><span class="label">UV Index:</span> <span class="value" id="modal-uv">--</span></div>
+                    <div class="metric"><span class="label">Precipitation:</span> <span class="value" id="modal-precip">--</span></div>
+                    <div class="metric"><span class="label">Sunrise:</span> <span class="value" id="modal-sunrise">--:--</span></div>
+                    <div class="metric"><span class="label">Sunset:</span> <span class="value" id="modal-sunset">--:--</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- App Logic -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/alerts.js"></script>
+    <script src="js/climate.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
